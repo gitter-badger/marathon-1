@@ -23,10 +23,14 @@ class LeaderProxyFilterModule extends AbstractModule {
   @Singleton
   def provideRequestForwarder(
     httpConf: HttpConf,
+    featuresConf: FeaturesConf,
     leaderProxyConf: LeaderProxyConf,
     @Named(ModuleNames.HOST_PORT) myHostPort: String)(implicit executionContext: ExecutionContext, actorSystem: ActorSystem): RequestForwarder = {
     val sslContext = SSLContextUtil.createSSLContext(httpConf.sslKeystorePath.get, httpConf.sslKeystorePassword.get)
-    new AsyncUrlConnectionRequestForwarder(sslContext, leaderProxyConf, myHostPort)
+    if (featuresConf.isDeprecatedFeatureSet(DeprecatedFeatures.syncProxy))
+      new JavaUrlConnectionRequestForwarder(sslContext, leaderProxyConf, myHostPort)
+    else
+      new AsyncUrlConnectionRequestForwarder(sslContext, leaderProxyConf, myHostPort)
   }
 }
 
