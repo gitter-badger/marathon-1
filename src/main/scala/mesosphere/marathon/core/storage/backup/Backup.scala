@@ -33,7 +33,6 @@ abstract class BackupRestoreAction extends StrictLogging {
     */
   @SuppressWarnings(Array("AsInstanceOf"))
   def action(conf: BackupConfig, fn: PersistentStoreBackup => Future[Done]): Unit = {
-    Kamon.start()
     implicit val system = ActorSystem("Backup")
     implicit val materializer = ActorMaterializer()
     implicit val scheduler = system.scheduler
@@ -51,7 +50,6 @@ abstract class BackupRestoreAction extends StrictLogging {
         sys.exit(1) // signal a problem to the caller
     } finally {
       Await.result(Http().shutdownAllConnectionPools(), Duration.Inf)
-      Kamon.shutdown()
       // akka http has an issue tearing down the connection pool: https://github.com/akka/akka-http/issues/907
       // We will hide the fail message from the user until this is fixed
       LoggerFactory.getLogger("akka.actor.ActorSystemImpl").asInstanceOf[Logger].setLevel(Level.OFF)

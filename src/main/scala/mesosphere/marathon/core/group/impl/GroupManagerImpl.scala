@@ -198,13 +198,13 @@ class GroupManagerImpl(
   private[this] def registerMetrics(): Unit = {
     if (metricsRegistered.compareAndSet(false, true)) {
       // We've already released metrics using these names, so we can't use the Metrics.* methods
-      Kamon.metrics.gauge("service.mesosphere.marathon.app.count") {
+      Kamon.gauge("service.mesosphere.marathon.app.count") {
         rootGroupOption().foldLeft(0L) { (_, group) =>
           group.transitiveApps.size.toLong
         }
       }
 
-      Kamon.metrics.gauge("service.mesosphere.marathon.group.count") {
+      Kamon.gauge("service.mesosphere.marathon.group.count") {
         rootGroupOption().foldLeft(0L) { (_, group) =>
           group.transitiveGroupsById.size.toLong
         }

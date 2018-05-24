@@ -9,12 +9,12 @@ import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation.{Around, Aspect}
 
 private object ServletTracing {
-  private[metrics] val `1xx` = Kamon.metrics.counter("org.eclipse.jetty.ServletContextHandler.1xx-responses")
-  private[metrics] val `2xx` = Kamon.metrics.counter("org.eclipse.jetty.ServletContextHandler.2xx-responses")
-  private[metrics] val `3xx` = Kamon.metrics.counter("org.eclipse.jetty.ServletContextHandler.3xx-responses")
-  private[metrics] val `4xx` = Kamon.metrics.counter("org.eclipse.jetty.ServletContextHandler.4xx-responses")
-  private[metrics] val `5xx` = Kamon.metrics.counter("org.eclipse.jetty.ServletContextHandler.5xx-responses")
-  private[metrics] val `api-errors` = Kamon.metrics.counter("org.eclipse.jetty.ServletContextHandler.api-errors")
+  private[metrics] val `1xx` = Kamon.counter("org.eclipse.jetty.ServletContextHandler.1xx-responses")
+  private[metrics] val `2xx` = Kamon.counter("org.eclipse.jetty.ServletContextHandler.2xx-responses")
+  private[metrics] val `3xx` = Kamon.counter("org.eclipse.jetty.ServletContextHandler.3xx-responses")
+  private[metrics] val `4xx` = Kamon.counter("org.eclipse.jetty.ServletContextHandler.4xx-responses")
+  private[metrics] val `5xx` = Kamon.counter("org.eclipse.jetty.ServletContextHandler.5xx-responses")
+  private[metrics] val `api-errors` = Kamon.counter("org.eclipse.jetty.ServletContextHandler.api-errors")
 }
 
 /** Automatically time all servlet endpoints */

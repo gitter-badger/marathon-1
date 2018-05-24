@@ -3,20 +3,23 @@ package raml
 
 import java.time.{Instant, OffsetDateTime, ZoneId}
 
-import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
-import kamon.metric.instrument.{Time, Counter => KCounter, Histogram => KHistogram, UnitOfMeasurement => KUnitOfMeasurement}
+import kamon.metric.PeriodSnapshot
+import kamon.metric.{Counter => KCounter, Histogram => KHistogram, MeasurementUnit => KMeasurementUnit}
 import play.api.libs.json.{JsObject, Json}
 
 trait MetricsConversion {
   lazy val zoneId = ZoneId.systemDefault()
-  implicit val unitOfMeasurementRamlWriter: Writes[KUnitOfMeasurement, UnitOfMeasurement] = Writes {
-    case t: Time =>
-      if (t.label == "n") TimeMeasurement("ns") else TimeMeasurement(t.label)
-    case general =>
-      GeneralMeasurement(name = general.name, label = general.label)
+  implicit val unitOfMeasurementRamlWriter: Writes[KMeasurementUnit, UnitOfMeasurement] = Writes { unit: KMeasurementUnit =>
+    if (unit.dimension == KMeasurementUnit.Dimension.Time)
+      if (unit == KMeasurementUnit.time.nanoseconds)
+        TimeMeasurement("ns")
+      else
+        TimeMeasurement(unit.magnitude.name)
+    else
+      GeneralMeasurement(name = unit.name, label = unit.label)
   }
 
-  implicit val metricsRamlWriter: Writes[TickMetricSnapshot, Metrics] = Writes { snapshot =>
+  implicit val metricsRamlWriter: Writes[PeriodSnapshot, Metrics] = Writes { snapshot =>
     val metrics = snapshot.metrics.flatMap {
       case (entity, entitySnapshot) =>
         entitySnapshot.metrics.map {

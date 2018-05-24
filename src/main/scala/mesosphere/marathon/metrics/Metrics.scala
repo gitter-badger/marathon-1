@@ -7,10 +7,11 @@ import akka.stream.scaladsl.Source
 import java.time.{Clock, Duration}
 
 import kamon.Kamon
-import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
-import kamon.metric.instrument.Histogram.DynamicRange
-import kamon.metric.instrument.{Time, UnitOfMeasurement}
+import kamon.metric.{MetricsSnapshot, PeriodSnapshot}
+import kamon.metric
+import kamon.metric.MeasurementUnit
 import kamon.metric.{Entity, SubscriptionFilter, instrument}
+import kamon.metric
 import kamon.util.MilliTimestamp
 
 import scala.concurrent.Future
@@ -57,7 +58,7 @@ object AcceptAllFilter extends SubscriptionFilter {
 }
 
 object Metrics {
-  implicit class KamonCounter(val counter: instrument.Counter) extends Counter {
+  implicit class KamonCounter(val counter: metric.Counter) extends Counter {
     override def increment(): KamonCounter = {
       counter.increment()
       this
@@ -69,8 +70,8 @@ object Metrics {
   }
 
   def counter(prefix: MetricPrefix, `class`: Class[_], metricName: String,
-    tags: Map[String, String] = Map.empty, unit: UnitOfMeasurement = UnitOfMeasurement.Unknown): Counter = {
-    Kamon.metrics.counter(name(prefix, `class`, metricName), tags, unit)
+    tags: Map[String, String] = Map.empty, unit: MeasurementUnit = MeasurementUnit.none): Counter = {
+    Kamon.counter(name(prefix, `class`, metricName), tags, unit)
   }
 
   private implicit class KamonGauge(val gauge: instrument.Gauge) extends Gauge {
@@ -86,7 +87,7 @@ object Metrics {
   }
   def gauge(prefix: MetricPrefix, `class`: Class[_], metricName: String, currentValue: () => Long,
     tags: Map[String, String] = Map.empty, unit: UnitOfMeasurement = UnitOfMeasurement.Unknown): Gauge = {
-    Kamon.metrics.gauge(name(prefix, `class`, metricName), tags, unit)(currentValue)
+    Kamon.gauge(name(prefix, `class`, metricName), tags, unit)(currentValue)
   }
 
   def atomicGauge(prefix: MetricPrefix, `class`: Class[_], metricName: String,
@@ -109,10 +110,10 @@ object Metrics {
   def histogram(prefix: MetricPrefix, `class`: Class[_], metricName: String,
     tags: Map[String, String] = Map.empty, unit: UnitOfMeasurement = UnitOfMeasurement.Unknown,
     dynamicRange: DynamicRange): Histogram = {
-    Kamon.metrics.histogram(name(prefix, `class`, metricName), tags, unit, dynamicRange)
+    Kamon.histogram(name(prefix, `class`, metricName), tags, unit, dynamicRange)
   }
 
-  implicit class KamonMinMaxCounter(val counter: instrument.MinMaxCounter) extends MinMaxCounter {
+  implicit class KamonMinMaxCounter(val counter: instrument) extends MinMaxCounter {
     override def increment(): KamonMinMaxCounter = {
       counter.increment()
       this
@@ -140,27 +141,30 @@ object Metrics {
   }
 
   def minMaxCounter(prefix: MetricPrefix, `class`: Class[_], metricName: String,
-    tags: Map[String, String] = Map.empty, unit: UnitOfMeasurement = UnitOfMeasurement.Unknown): MinMaxCounter = {
-    Kamon.metrics.minMaxCounter(name(prefix, `class`, metricName), tags, unit)
+    tags: Map[String, String] = Map.empty, unit: MeasurementUnit = MeasurementUnit.none): metric.RangeSamplerMetric = {
+    val t.RangeSamplerMetric = Kamon.rangeSampler(name(prefix, `class`, metricName), unit)
+    t.refine(tags)
+    t
   }
 
   def timer(prefix: MetricPrefix, `class`: Class[_], metricName: String,
-    tags: Map[String, String] = Map.empty, unit: Time = Time.Nanoseconds): Timer = {
+    tags: Map[String, String] = Map.empty, unit: MeasurementUnit = MeasurementUnit.time.nanoseconds): Timer = {
+    require(unit.dimension == MeasurementUnit.Dimension.Time)
     HistogramTimer(name(prefix, `class`, metricName), tags, unit)
   }
 
   def subscribe(actorRef: ActorRef, filter: SubscriptionFilter = AcceptAllFilter): Done = {
-    Kamon.metrics.subscribe(filter, actorRef)
+    Kamon.subscribe(filter, actorRef)
     Done
   }
 
-  private[this] var metrics: TickMetricSnapshot = {
-    val now = MilliTimestamp.now
-    TickMetricSnapshot(now, now, Map.empty)
+  private[this] var metrics: PeriodSnapshot = {
+    val now = java.time.Instant.now
+    PeriodSnapshot(now, now, MetricsSnapshot(Nil, Nil, Nil, Nil))
   }
 
   // returns the current snapshot. Doesn't collect until `start` is called
-  def snapshot(): TickMetricSnapshot = metrics
+  def snapshot(): PeriodSnapshot = metrics
 
   // Starts collecting snapshots.
   def start(actorRefFactory: ActorRefFactory, config: MetricsReporterConf): Done = {

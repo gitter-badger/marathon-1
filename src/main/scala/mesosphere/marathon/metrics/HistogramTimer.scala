@@ -7,8 +7,8 @@ import akka.stream.{Attributes, FlowShape, Inlet, Outlet}
 import java.time.{Clock, Duration, Instant}
 
 import kamon.Kamon
-import kamon.metric.instrument
-import kamon.metric.instrument.Time
+import kamon.metric
+import kamon.metric.{DynamicRange, MeasurementUnit}
 import mesosphere.marathon.core.async.ExecutionContexts
 
 import scala.Exception
@@ -59,8 +59,13 @@ private[metrics] class TimedStage[T](histogram: instrument.Histogram, clock: Clo
 }
 
 private[metrics] case class HistogramTimer(name: String, tags: Map[String, String] = Map.empty,
-    unit: Time = Time.Nanoseconds) extends Timer {
-  private[metrics] val histogram: instrument.Histogram = Kamon.metrics.histogram(name, tags, unit)
+    unit: MeasurementUnit = MeasurementUnit.time.nanoseconds) extends Timer {
+
+  private[metrics] val histogram: metric.Histogram = {
+    val h = Kamon.histogram(name, unit)
+    h.refine(tags)
+    h
+  }
 
   def apply[T](f: => Future[T]): Future[T] = {
     val start = System.nanoTime()

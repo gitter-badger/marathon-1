@@ -16,7 +16,7 @@ case class AtomicGauge(name: String, unitOfMeasurement: UnitOfMeasurement = Unit
 
   // The current value of the `counter` will be pulled by Kamon when needed
   // using the following gauge definition
-  Kamon.metrics.gauge(name, unitOfMeasurement) { counter.get() }
+  Kamon.gauge(name, unitOfMeasurement) { counter.get() }
 
   def value(): Long = counter.get()
 

@@ -25,7 +25,7 @@ class GroupManagerModule(
     val groupManager = new GroupManagerImpl(config, None, groupRepo, scheduler)
 
     val startedAt = System.currentTimeMillis()
-    Kamon.metrics.gauge("service.mesosphere.marathon.uptime", Time.Milliseconds)(
+    Kamon.gauge("service.mesosphere.marathon.uptime", Time.Milliseconds)(
       System.currentTimeMillis() - startedAt
     )
 

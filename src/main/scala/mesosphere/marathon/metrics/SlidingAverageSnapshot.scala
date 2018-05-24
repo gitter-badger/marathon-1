@@ -16,7 +16,7 @@ import kamon.util.{MapMerge, MilliTimestamp}
   */
 class SlidingAverageSnapshot(val averagingWindow: Duration) extends StrictLogging {
 
-  val collectionContext: CollectionContext = Kamon.metrics.buildDefaultCollectionContext
+  val collectionContext: CollectionContext = Kamon.buildDefaultCollectionContext
 
   /**
     * The current summarised snapshot

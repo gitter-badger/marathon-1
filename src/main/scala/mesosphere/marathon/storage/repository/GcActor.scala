@@ -73,11 +73,11 @@ private[storage] class GcActor[K, C, S](
   extends FSM[State, Data] with LoggingFSM[State, Data] with ScanBehavior[K, C, S] with CompactBehavior[K, C, S] {
 
   // We already released metrics with these names, so we can't use the Metrics.* methods
-  private val totalGcs = Kamon.metrics.counter("GarbageCollector.totalGcs")
+  private val totalGcs = Kamon.counter("GarbageCollector.totalGcs")
   private var lastScanStart = Instant.now()
-  private val scanTime = Kamon.metrics.histogram("GarbageCollector.scanTime", Time.Milliseconds)
+  private val scanTime = Kamon.histogram("GarbageCollector.scanTime", Time.Milliseconds)
   private var lastCompactStart = Instant.now()
-  private val compactTime = Kamon.metrics.histogram("GarbageCollector.compactTime", Time.Milliseconds)
+  private val compactTime = Kamon.histogram("GarbageCollector.compactTime", Time.Milliseconds)
 
   startWith(Idle, IdleData)
 

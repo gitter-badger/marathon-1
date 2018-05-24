@@ -119,8 +119,8 @@ class HTTPMetricsFilter extends Filter {
 
     // Since the filter processing is synchronous, when the execution reaches this point
     // the counters should be populated. This is where we push the values to Kamon.
-    bytesReadMetric.increment(inputCounter.bytesRead)
-    bytesWrittenMetric.increment(outputCounter.bytesWritten)
+    bytesReadMetric.increment(inputCounter.bytesRead.toLong)
+    bytesWrittenMetric.increment(outputCounter.bytesWritten.toLong)
   }
 
   override def init(filterConfig: FilterConfig): Unit = {}

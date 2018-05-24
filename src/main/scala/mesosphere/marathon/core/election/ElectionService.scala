@@ -10,12 +10,13 @@ import akka.stream.OverflowStrategy
 import akka.stream.ActorMaterializer
 import com.typesafe.scalalogging.StrictLogging
 import kamon.Kamon
-import kamon.metric.instrument.Time
+import kamon.metric.MeasurementUnit
 import mesosphere.marathon.core.async.ExecutionContexts
 import mesosphere.marathon.core.base.CrashStrategy
 import mesosphere.marathon.stream.EnrichedFlow
 import mesosphere.marathon.util.CancellableOnce
 import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.duration._
 import scala.util.{Failure, Success}
 
 trait ElectionServiceLeaderInfo {
@@ -332,14 +333,29 @@ class ElectionServiceImpl(
 
 object ElectionService extends StrictLogging {
   private val leaderDurationMetric = "service.mesosphere.marathon.leaderDuration"
+  val g = Kamon.gauge(leaderDurationMetric, MeasurementUnit.time.milliseconds)
+  val ticks = Source.tick(0.seconds, 1.second, Right(Unit))
+  val metricsSink: Sink[LeadershipTransition, Future[Done]] = Flow[LeadershipTransition]
+    .map(Left(_))
+    .merge(ticks, true)
+    .statefulMapConcat { () =>
+      var startedAt = 0L
 
-  val metricsSink = Sink.foreach[LeadershipTransition] {
-    case LeadershipTransition.ElectedAsLeaderAndReady =>
-      val startedAt = System.currentTimeMillis()
-      Kamon.metrics.gauge(leaderDurationMetric, Time.Milliseconds)(System.currentTimeMillis() - startedAt)
-    case LeadershipTransition.Standby =>
-      Kamon.metrics.removeGauge(leaderDurationMetric)
-  }
+      {
+        case Right(_) =>
+          if (startedAt != 0L)
+            List(System.currentTimeMillis() - startedAt)
+          else
+            Nil
+        case Left(LeadershipTransition.ElectedAsLeaderAndReady) =>
+          startedAt = System.currentTimeMillis()
+          List(0L)
+        case Left(LeadershipTransition.Standby) =>
+          startedAt = 0L
+          List(0L)
+      }
+    }
+    .toMat(Sink.foreach { leaderMs => g.set(leaderMs) })(Keep.right)
 }
 
 /**

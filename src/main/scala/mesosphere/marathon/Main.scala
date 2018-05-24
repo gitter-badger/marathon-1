@@ -106,7 +106,7 @@ class MarathonApp(args: Seq[String]) extends AutoCloseable with StrictLogging {
 
     overrides.withFallback(ConfigFactory.load())
   }
-  Kamon.start(config)
+  Kamon.reconfigure(config)
 
   val actorSystem = ActorSystem("marathon")
 
